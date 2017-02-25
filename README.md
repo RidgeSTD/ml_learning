@@ -1,2 +1,2 @@
-# ocr_neural_network
-A practice of OCR using neural network
+# ml_learning
+A python practice of machine learning.
