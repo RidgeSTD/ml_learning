@@ -1,0 +1,15 @@
+#OSX
+.DS_Store
+
+# Windows:
+Desktop.ini
+
+
+# Python:
+*.py[cod]
+*.so
+*.egg
+*.egg-info
+
+#Pycharm
+.idea/*
