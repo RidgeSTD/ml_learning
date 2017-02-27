@@ -13,3 +13,7 @@ Desktop.ini
 
 #Pycharm
 .idea/*
+
+
+#custom
+params.txt
