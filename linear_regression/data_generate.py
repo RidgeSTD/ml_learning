@@ -4,13 +4,13 @@ from random import random
 import numpy as np
 
 
-file_path = input("give the output path")
-if path.exists(file_path):
-    os.remove(file_path)
+training_file_path = input("give the output path")
+if path.exists(training_file_path):
+    os.remove(training_file_path)
 
-if not path.isdir(path.dirname(file_path)):
-    os.makedirs(path.dirname(file_path))
-file = open(file_path, 'w')
+if not path.isdir(path.dirname(training_file_path)):
+    os.makedirs(path.dirname(training_file_path))
+file = open(training_file_path, 'w')
 
 x = np.random.random_sample(40) * 100
 for i in range(0, 40):
