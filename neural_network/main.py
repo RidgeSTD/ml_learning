@@ -11,11 +11,11 @@ def load_data(training_file_path, testing_file_path):
     data = sio.loadmat(training_file_path)
     X = data['X']
     Y = data['y']
-    X = np.vstack((np.ones(shape=(1, X.shape[1]), dtype=float), X))  # add bias
+    X = np.hstack((np.ones(shape=(X.shape[0], 1), dtype=float), X))  # add bias
     data = sio.loadmat(testing_file_path)
     X_test = data['X']
     Y_test = data['y']
-    X_test = np.vstack((np.ones(shape=(1, X_test.shape[1]), dtype=float), X))  # add bias
+    X_test = np.hstack((np.ones(shape=(X_test.shape[0], 1), dtype=float), X_test))  # add bias
     print("load data finish!")
     return X, Y, X_test, Y_test
 
@@ -44,7 +44,7 @@ def bwd_propagation(X, Y_logic, g, o, w1, w2, my_lambda, learning_rate):
     m = X.shape[0]
 
     err_out = o - Y_logic
-    error_hidden = np.dot(err_out, w2.transpose()) * o * (1-o)
+    error_hidden = np.dot(err_out, w2.transpose()) * g * (1-g)
 
     delta1 = np.dot(X.transpose(), error_hidden) / m
     norm = my_lambda * w1
@@ -87,14 +87,14 @@ def make_logic_matrix(Y, K):
     m = Y.shape[0]
     ans = np.ndarray(shape=(m, K), dtype=int)
     for i in range(0, m):
-        ans[i, :] = (Y[i,1]==K).astype(int)   #here is really trick!! Mark it!
+        ans[i, :] = (Y[i,0]==K).astype(int)   #here is really trick!! Mark it!
     return ans
 
 
 def evaluate_neural_network(X_test, Y_test, w1, w2):
-    g, o = fwd_propagation(X_test, Y_test, w1, w2)
+    g, o = fwd_propagation(X_test, w1, w2)
     Y_pred = predict(o)
-    m_test = Y_test.size[0]
+    m_test = Y_test.shape[0]
     correct_num = np.sum((Y_pred==Y_test).astype(int), 0)[0]
     print("%d correct on %d test sets, accuracy=%%%f" %(correct_num, m_test, (correct_num*100)/m_test))
 
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     X, Y, X_test, Y_test = load_data(training_file_path, testing_file_path)
 
     Y_logic = make_logic_matrix(Y, K)
-    w1 = np.random.random_sample(size=(X.shape[1]+1, hidden_node_num+1))
+    w1 = np.random.random_sample(size=(X.shape[1], hidden_node_num+1))
     w2 = np.random.random_sample(size=(hidden_node_num+1, K))
 
     for i in range(0, iteration):
