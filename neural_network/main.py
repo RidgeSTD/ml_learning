@@ -27,29 +27,50 @@ def fwd_propagation(X, w1, w2):
     :param w2: weight between hidden layer and output layer
     :return: value of hidden layer:g and value of output layer:o
     '''
-    pass
+    g = np.dot(X, w1)
+    o = np.dot(g, w2)
+    return g, o
 
 
-def bwd_propagation(X, Y, g, w1, w2):
+def bwd_propagation(X, Y_logic, g, o, w1, w2, my_lambda, learning_rate):
     '''
     :param X: features
     :param Y: actual result from data set
     :param g: value of hidden layer
     :param w1: weight between input layer and hidden layer
     :param w2: weight between hidden layer and output layer
-    :return: new w1 and w2
+    :return: new w1 and w2, after adjustment
     '''
-    pass
+    m = X.shape[0]
+
+    err_out = o - Y_logic
+    error_hidden = np.dot(err_out, w2.transpose()) * o * (1-o)
+
+    delta1 = np.dot(X.transpose(), error_hidden) / m
+    norm = my_lambda * w1
+    norm[0, :] = 0
+    delta1 = delta1 + norm
+
+    delta2 = np.dot(g.transpose(), err_out) / m
+    norm = my_lambda * w2
+    norm[0, :] = 0
+    delta2 = delta2 + norm
+    new_w1, new_w2 = update_weight(w1, w2, delta1, delta2, learning_rate)
+    return new_w1, new_w2
 
 
-def update_weight(w1, w2):
+def update_weight(w1, w2, delta1, delta2, learning_rate):
     '''
     update w1 and w2 according to the result of backward propagation
     :param w1: weight between input layer and hidden layer
     :param w2: weight between hidden layer and output layer
-    :return: new w1 and w2
+    :param delta1: partial derivative for weight between input and hidden layer
+    :param delta2: partial derivative for weight between hidden layer and output layer
+    :return: ans1:new w1  and  ans2: new w2
     '''
-    pass
+    ans1 = w1 + learning_rate * delta1
+    ans2 = w2 + learning_rate * delta2
+    return ans1, ans2
 
 
 def predict(o):
@@ -58,7 +79,25 @@ def predict(o):
     :param o: value of output layer
     :return: vector of prediction: predic
     '''
-    pass
+    pre = np.argmax(o, 1)
+    return pre
+
+
+def make_logic_matrix(Y, K):
+    m = Y.shape[0]
+    ans = np.ndarray(shape=(m, K), dtype=int)
+    for i in range(0, m):
+        ans[i, :] = (Y[i,1]==K).astype(int)   #here is really trick!! Mark it!
+    return ans
+
+
+def evaluate_neural_network(X_test, Y_test, w1, w2):
+    g, o = fwd_propagation(X_test, Y_test, w1, w2)
+    Y_pred = predict(o)
+    m_test = Y_test.size[0]
+    correct_num = np.sum((Y_pred==Y_test).astype(int), 0)[0]
+    print("%d correct on %d test sets, accuracy=%%%f" %(correct_num, m_test, (correct_num*100)/m_test))
+
 
 
 if __name__ == '__main__':
@@ -67,14 +106,25 @@ if __name__ == '__main__':
     iteration = 50
     learning_rate = 0.1
     hidden_node_num = 25
+    K = 10
+    my_lambda = 1
+    '''
+    iteration: iterations of feed forward and backward propagation
+    learning_rate: learning rate of gradient decent, which is actually been used here
+    hidden_node_num: since we have only on hidden layer, it's convenient to store it
+    K: the size of cluster
+    my_lambda: panalty rate, applied on the params against over fitting
+    '''
 
     X, Y, X_test, Y_test = load_data(training_file_path, testing_file_path)
 
+    Y_logic = make_logic_matrix(Y, K)
     w1 = np.random.random_sample(size=(X.shape[1]+1, hidden_node_num+1))
-    w2 = np.random.random_sample(size=(hidden_node_num+1, 10))
+    w2 = np.random.random_sample(size=(hidden_node_num+1, K))
 
-    # for i in range(0, iteration):
-    #     if i != 0:
-    #         bwd_propagation(X, Y, g, w1, w2)
-        #fwd_propagation
-    pass
+    for i in range(0, iteration):
+        if i != 0:
+            w1, w2 = bwd_propagation(X, Y, g, o, w1, w2, my_lambda, learning_rate)
+        if i != iteration - 1:
+            g, o = fwd_propagation(X, w1, w2)
+        evaluate_neural_network(X_test, Y_test, w1, w2)
