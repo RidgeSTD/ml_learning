@@ -1,5 +1,6 @@
 from scipy import io as sio
 import numpy as np
+import scipy as sp
 
 # using a one hidden layer with 25 nodes model, which is recommended by ML Stanford
 # the input data has 5000 samples with each 40 features, namely 20x20 pixels
@@ -65,10 +66,10 @@ def bwd_propagation(X, Y_logic, g, o, w1, w2, my_lambda):
     return delta1, delta2
 
 
-def cost_function(nn_weights, X, Y_logic, my_lambda, hidden_nodes_size, input_layer_size, K):
+def cost_function(nn_weights, X, Y_logic, my_lambda, hidden_layer_size, input_layer_size, K):
     m = Y_logic.shape(0)
-    w1 = nn_weights[0:input_layer_size * hidden_nodes_size].reshape(input_layer_size, hidden_nodes_size)
-    w2 = nn_weights[input_layer_size * hidden_nodes_size: ].reshape(input_layer_size, K)
+    w1 = nn_weights[0:input_layer_size * hidden_layer_size].reshape(input_layer_size, hidden_layer_size)
+    w2 = nn_weights[input_layer_size * hidden_layer_size:].reshape(input_layer_size, K)
     g, o = feed_fwd(X, w1, w2)
     tmp = Y_logic * np.log(o) + (1 - Y_logic) * np.log(1 - o)
     w1[0, :] = 0
@@ -79,10 +80,10 @@ def cost_function(nn_weights, X, Y_logic, my_lambda, hidden_nodes_size, input_la
     return J
 
 
-def gradient(nn_weights, X, Y_logic, my_lambda,  hidden_nodes_size, input_layer_size, K):
+def gradient(nn_weights, X, Y_logic, my_lambda, hidden_layer_size, input_layer_size, K):
     m = Y_logic.shape[0]
-    w1 = nn_weights[0:input_layer_size * hidden_nodes_size].reshape(input_layer_size, hidden_nodes_size)
-    w2 = nn_weights[input_layer_size * hidden_nodes_size:].reshape(input_layer_size, K)
+    w1 = nn_weights[0:input_layer_size * hidden_layer_size].reshape(input_layer_size, hidden_layer_size)
+    w2 = nn_weights[input_layer_size * hidden_layer_size:].reshape(input_layer_size, K)
     g, o = feed_fwd(X, w1, w2)
     delta1, delta2 = bwd_propagation(X, Y_logic, g, o, w1, w2, my_lambda)
     return np.hstack((delta1.reshape(delta1.size), delta2.reshape(delta2.size)))
@@ -136,7 +137,8 @@ if __name__ == '__main__':
     testing_file_path = "/Users/data/data_hand_write_numbers_testing.mat"
     iteration = 5000
     # learning_rate = 0.1
-    hidden_node_num = 25
+    hidden_layer_size = 26
+    input_layer_size = 401
     K = 10
     my_lambda = 3
     epsilon = 0.12
@@ -152,5 +154,12 @@ if __name__ == '__main__':
     X, Y, X_test, Y_test = load_data(training_file_path, testing_file_path)
 
     Y_logic = make_logic_matrix(Y, K)
-    w1 = np.random.random_sample(size=(X.shape[1], hidden_node_num+1))
-    w2 = np.random.random_sample(size=(hidden_node_num+1, K))
+    w1 = np.random.random_sample(X.shape[1] * (hidden_layer_size)) * 2 * epsilon - epsilon
+    w2 = np.random.random_sample((hidden_layer_size) * K) * 2 * epsilon - epsilon
+
+    nn_weights_opt, J_opt = sp.optimize.fmin_bfgs(f=cost_function, x0=np.hstack(w1, w1), fprime=gradient,
+                                                  args=(X, Y_logic, my_lambda, hidden_layer_size, input_layer_size, K),
+                                                  full_output=True)
+    w1 = nn_weights_opt[0:input_layer_size * hidden_layer_size].reshape(input_layer_size, hidden_layer_size)
+    w2 = nn_weights_opt[input_layer_size * hidden_layer_size:].reshape(input_layer_size, K)
+    evaluate_neural_network(X_test, Y_test, w1, w2)
