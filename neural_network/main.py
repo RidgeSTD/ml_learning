@@ -50,15 +50,18 @@ def bwd_propagation(X, Y_logic, g, o, w1, w2, my_lambda, learning_rate):
     err_out = o - Y_logic
     error_hidden = np.dot(err_out, w2.transpose()) * g * (1-g)
 
-    delta1 = np.dot(X.transpose(), error_hidden) / m
+    delta1 = np.dot(X.transpose(), error_hidden)
     norm = my_lambda * w1
     norm[0, :] = 0
     delta1 = delta1 + norm
+    delta1 = delta1 / m
 
-    delta2 = np.dot(g.transpose(), err_out) / m
+    delta2 = np.dot(g.transpose(), err_out)
     norm = my_lambda * w2
     norm[0, :] = 0
     delta2 = delta2 + norm
+    delta2 = delta2 / m
+
     new_w1, new_w2 = update_weight(w1, w2, delta1, delta2, learning_rate)
     return new_w1, new_w2
 
@@ -77,13 +80,13 @@ def update_weight(w1, w2, delta1, delta2, learning_rate):
     return ans1, ans2
 
 
-def predict(o):
+def predict(o_p):
     '''
     decide which number is it to the highest probability
     :param o: value of output layer
     :return: vector of prediction: predic
     '''
-    pre = np.argmax(o, 1)
+    pre = np.argmax(o_p, 1)
     return pre
 
 
@@ -97,8 +100,8 @@ def make_logic_matrix(Y, K):
 
 
 def evaluate_neural_network(X_test, Y_test, w1, w2):
-    g, o = fwd_propagation(X_test, w1, w2)
-    Y_pred = predict(o)
+    g_e, o_e = fwd_propagation(X_test, w1, w2)
+    Y_pred = predict(o_e)
     m_test = Y_test.shape[0]
     correct_num = np.sum((Y_pred==Y_test).astype(int), 0)[0]
     print("%d correct on %d test sets, accuracy=%f%%" %(correct_num, m_test, (correct_num*100)/m_test))
@@ -111,7 +114,7 @@ if __name__ == '__main__':
     learning_rate = 0.1
     hidden_node_num = 25
     K = 10
-    my_lambda = 1
+    my_lambda = 3
     '''
     iteration: iterations of feed forward and backward propagation
     learning_rate: learning rate of gradient decent, which is actually been used here
@@ -128,7 +131,7 @@ if __name__ == '__main__':
 
     for i in range(0, iteration):
         if i != 0:
-            w1, w2 = bwd_propagation(X, Y, g, o, w1, w2, my_lambda, learning_rate)
+            w1, w2 = bwd_propagation(X, Y_logic, g, o, w1, w2, my_lambda, learning_rate)
         if i != iteration - 1:
             g, o = fwd_propagation(X, w1, w2)
         evaluate_neural_network(X_test, Y_test, w1, w2)
