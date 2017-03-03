@@ -19,6 +19,7 @@ for i in range(0, m):
     tmp = y[index, 0]
     y[index, 0] = y[i, 0]
     y[i, 0] = tmp
+    y[i, 0] = y[i, 0] % 10
 
 m = int(X.shape[0] * 0.9)
 
