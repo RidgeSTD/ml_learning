@@ -24,7 +24,7 @@ def sigmoid(M):
     return 1 / (1 + np.exp(-M))
 
 
-def fwd_propagation(X, w1, w2):
+def feed_fwd(X, w1, w2):
     '''
     :param X: features
     :param w1: weight between input layer and hidden layer
@@ -36,14 +36,14 @@ def fwd_propagation(X, w1, w2):
     return g, o
 
 
-def bwd_propagation(X, Y_logic, g, o, w1, w2, my_lambda, learning_rate):
+def bwd_propagation(X, Y_logic, g, o, w1, w2, my_lambda):
     '''
     :param X: features
     :param Y: actual result from data set
     :param g: value of hidden layer
     :param w1: weight between input layer and hidden layer
     :param w2: weight between hidden layer and output layer
-    :return: new w1 and w2, after adjustment
+    :return: partial deravative for every edge in neural network
     '''
     m = X.shape[0]
 
@@ -62,12 +62,36 @@ def bwd_propagation(X, Y_logic, g, o, w1, w2, my_lambda, learning_rate):
     delta2 = delta2 + norm
     delta2 = delta2 / m
 
-    new_w1, new_w2 = update_weight(w1, w2, delta1, delta2, learning_rate)
-    return new_w1, new_w2
+    return delta1, delta2
+
+
+def cost_function(nn_weights, X, Y_logic, my_lambda, hidden_nodes_size, input_layer_size, K):
+    m = Y_logic.shape(0)
+    w1 = nn_weights[0:input_layer_size * hidden_nodes_size].reshape(input_layer_size, hidden_nodes_size)
+    w2 = nn_weights[input_layer_size * hidden_nodes_size: ].reshape(input_layer_size, K)
+    g, o = feed_fwd(X, w1, w2)
+    tmp = Y_logic * np.log(o) + (1 - Y_logic) * np.log(1 - o)
+    w1[0, :] = 0
+    w2[0, :] = 0
+    J = (sum(sum(w1**2, 0)) + sum(sum(w2**2, 0))) * (my_lambda / 2)
+    J = J + sum(sum(tmp, 0))
+    J = J / m
+    return J
+
+
+def gradient(nn_weights, X, Y_logic, my_lambda,  hidden_nodes_size, input_layer_size, K):
+    m = Y_logic.shape[0]
+    w1 = nn_weights[0:input_layer_size * hidden_nodes_size].reshape(input_layer_size, hidden_nodes_size)
+    w2 = nn_weights[input_layer_size * hidden_nodes_size:].reshape(input_layer_size, K)
+    g, o = feed_fwd(X, w1, w2)
+    delta1, delta2 = bwd_propagation(X, Y_logic, g, o, w1, w2, my_lambda)
+    return np.hstack((delta1.reshape(delta1.size), delta2.reshape(delta2.size)))
+
 
 
 def update_weight(w1, w2, delta1, delta2, learning_rate):
     '''
+    **discarded**
     update w1 and w2 according to the result of backward propagation
     :param w1: weight between input layer and hidden layer
     :param w2: weight between hidden layer and output layer
@@ -100,7 +124,7 @@ def make_logic_matrix(Y, K):
 
 
 def evaluate_neural_network(X_test, Y_test, w1, w2):
-    g_e, o_e = fwd_propagation(X_test, w1, w2)
+    g_e, o_e = feed_fwd(X_test, w1, w2)
     Y_pred = predict(o_e)
     m_test = Y_test.shape[0]
     correct_num = np.sum((Y_pred==Y_test).astype(int), 0)[0]
@@ -110,17 +134,19 @@ def evaluate_neural_network(X_test, Y_test, w1, w2):
 if __name__ == '__main__':
     training_file_path = "/Users/data/data_hand_write_numbers_training.mat"
     testing_file_path = "/Users/data/data_hand_write_numbers_testing.mat"
-    iteration = 50
-    learning_rate = 0.1
+    iteration = 5000
+    # learning_rate = 0.1
     hidden_node_num = 25
     K = 10
     my_lambda = 3
+    epsilon = 0.12
     '''
     iteration: iterations of feed forward and backward propagation
-    learning_rate: learning rate of gradient decent, which is actually been used here
+    # learning_rate: learning rate of gradient decent, which is actually been used here
     hidden_node_num: since we have only on hidden layer, it's convenient to store it
     K: the size of cluster
     my_lambda: panalty rate, applied on the params against over fitting
+    epsilon: range for randomly initialize w1 and w2
     '''
 
     X, Y, X_test, Y_test = load_data(training_file_path, testing_file_path)
@@ -128,10 +154,3 @@ if __name__ == '__main__':
     Y_logic = make_logic_matrix(Y, K)
     w1 = np.random.random_sample(size=(X.shape[1], hidden_node_num+1))
     w2 = np.random.random_sample(size=(hidden_node_num+1, K))
-
-    for i in range(0, iteration):
-        if i != 0:
-            w1, w2 = bwd_propagation(X, Y_logic, g, o, w1, w2, my_lambda, learning_rate)
-        if i != iteration - 1:
-            g, o = fwd_propagation(X, w1, w2)
-        evaluate_neural_network(X_test, Y_test, w1, w2)
