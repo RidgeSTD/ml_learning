@@ -20,6 +20,10 @@ def load_data(training_file_path, testing_file_path):
     return X, Y, X_test, Y_test
 
 
+def sigmoid(M):
+    return 1 / (1 + np.exp(-M))
+
+
 def fwd_propagation(X, w1, w2):
     '''
     :param X: features
@@ -27,8 +31,8 @@ def fwd_propagation(X, w1, w2):
     :param w2: weight between hidden layer and output layer
     :return: value of hidden layer:g and value of output layer:o
     '''
-    g = np.dot(X, w1)
-    o = np.dot(g, w2)
+    g = sigmoid(np.dot(X, w1))
+    o = sigmoid(np.dot(g, w2))
     return g, o
 
 
@@ -86,8 +90,9 @@ def predict(o):
 def make_logic_matrix(Y, K):
     m = Y.shape[0]
     ans = np.ndarray(shape=(m, K), dtype=int)
+    tmp = np.linspace(1, K, K, dtype=int)
     for i in range(0, m):
-        ans[i, :] = (Y[i,0]==K).astype(int)   #here is really trick!! Mark it!
+        ans[i, :] = (Y[i,0]==tmp).astype(int)   #here is really trick!! Mark it!
     return ans
 
 
@@ -96,8 +101,7 @@ def evaluate_neural_network(X_test, Y_test, w1, w2):
     Y_pred = predict(o)
     m_test = Y_test.shape[0]
     correct_num = np.sum((Y_pred==Y_test).astype(int), 0)[0]
-    print("%d correct on %d test sets, accuracy=%%%f" %(correct_num, m_test, (correct_num*100)/m_test))
-
+    print("%d correct on %d test sets, accuracy=%f%%" %(correct_num, m_test, (correct_num*100)/m_test))
 
 
 if __name__ == '__main__':

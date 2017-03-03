@@ -16,12 +16,11 @@ for i in range(0, m):
     tmp = X[index, :]
     X[index, :] = X[i, :]
     X[i, :] = tmp
-    tmp = y[index]
-    y[index] = y[i]
-    y[i] = tmp
+    tmp = y[index, 0]
+    y[index, 0] = y[i, 0]
+    y[i, 0] = tmp
 
-
-m = int(X.shape[0] * 0.8)
+m = int(X.shape[0] * 0.9)
 
 X_test = X[m:, :]
 y_test = y[m:, :]
