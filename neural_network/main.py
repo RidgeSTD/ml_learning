@@ -26,52 +26,20 @@ def sigmoid(M):
 
 
 def feed_fwd(X, w1, w2):
-    '''
-    :param X: features
-    :param w1: weight between input layer and hidden layer
-    :param w2: weight between hidden layer and output layer
-    :return: value of hidden layer:g and value of output layer:o
-    '''
-    g = sigmoid(np.dot(X, w1))
-    o = sigmoid(np.dot(g, w2))
-    return g, o
+    input_hidden_layer = np.dot(X, w1)
+    output_hidden_layer = sigmoid(input_hidden_layer)
+    input_output_layer = np.dot(output_hidden_layer, w2)
+    output_output_layer = sigmoid(input_output_layer)
+    return input_hidden_layer, output_hidden_layer, input_output_layer, output_output_layer
 
-
-def bwd_propagation(X, Y_logic, g, o, w1, w2, my_lambda):
-    '''
-    :param X: features
-    :param Y: actual result from data set
-    :param g: value of hidden layer
-    :param w1: weight between input layer and hidden layer
-    :param w2: weight between hidden layer and output layer
-    :return: partial deravative for every edge in neural network
-    '''
-    m = X.shape[0]
-
-    err_out = o - Y_logic
-    error_hidden = np.dot(err_out, w2.transpose()) * g * (1-g)
-
-    delta1 = np.dot(X.transpose(), error_hidden)
-    norm = my_lambda * w1
-    norm[0, :] = 0
-    delta1 = delta1 + norm
-    delta1 = delta1 / m
-
-    delta2 = np.dot(g.transpose(), err_out)
-    norm = my_lambda * w2
-    norm[0, :] = 0
-    delta2 = delta2 + norm
-    delta2 = delta2 / m
-
-    return delta1, delta2
 
 
 def cost_function(nn_weights, X, Y_logic, my_lambda, hidden_layer_size, input_layer_size, K):
     m = Y_logic.shape[0]
     w1 = nn_weights[0:input_layer_size * hidden_layer_size].reshape(input_layer_size, hidden_layer_size)
     w2 = nn_weights[input_layer_size * hidden_layer_size:].reshape(hidden_layer_size, K)
-    g, o = feed_fwd(X, w1, w2)
-    tmp = Y_logic * np.log(o) + (1 - Y_logic) * np.log(1 - o)
+    input_hidden_layer, output_hidden_layer, input_output_layer, output_output_layer = feed_fwd(X, w1, w2)
+    tmp = Y_logic * np.log(output_output_layer) + (1 - Y_logic) * np.log(1 - output_output_layer)
     w1[0, :] = 0
     w2[0, :] = 0
     J = (sum(sum(w1**2, 0)) + sum(sum(w2**2, 0))) * (my_lambda / 2)
@@ -84,9 +52,26 @@ def gradient(nn_weights, X, Y_logic, my_lambda, hidden_layer_size, input_layer_s
     m = Y_logic.shape[0]
     w1 = nn_weights[0:input_layer_size * hidden_layer_size].reshape(input_layer_size, hidden_layer_size)
     w2 = nn_weights[input_layer_size * hidden_layer_size:].reshape(hidden_layer_size, K)
-    g, o = feed_fwd(X, w1, w2)
-    delta1, delta2 = bwd_propagation(X, Y_logic, g, o, w1, w2, my_lambda)
-    return np.hstack((delta1.reshape(delta1.size), delta2.reshape(delta2.size)))
+
+    input_hidden_layer, output_hidden_layer, input_output_layer, output_output_layer = feed_fwd(X, w1, w2)
+
+    # backward propagation
+    err_out = output_output_layer - Y_logic
+    error_hidden = np.dot(err_out, w2.transpose()) * input_hidden_layer * (1 - input_hidden_layer)
+
+    delta_input = np.dot(X.transpose(), error_hidden)
+    norm = my_lambda * w1
+    norm[0, :] = 0
+    delta_input = delta_input + norm
+    delta_input = delta_input / m
+
+    delta_hidden = np.dot(output_hidden_layer.transpose(), err_out)
+    norm = my_lambda * w2
+    norm[0, :] = 0
+    delta_hidden = delta_hidden + norm
+    delta_hidden = delta_hidden / m
+
+    return np.hstack((delta_input.reshape(delta_input.size), delta_hidden.reshape(delta_hidden.size)))
 
 
 
@@ -125,8 +110,9 @@ def make_logic_matrix(Y, K):
 
 
 def evaluate_neural_network(X_test, Y_test, w1, w2):
-    g_e, o_e = feed_fwd(X_test, w1, w2)
-    Y_pred = predict(o_e)
+    # TODO
+    input_hidden_layer, output_hidden_layer, input_output_layer, output_output_layer = feed_fwd(X_test, w1, w2)
+    Y_pred = predict(output_output_layer)
     m_test = Y_test.shape[0]
     correct_num = np.sum((Y_pred==Y_test).astype(int), 0)[0]
     print("%d correct on %d test sets, accuracy=%f%%" %(correct_num, m_test, (correct_num*100)/m_test))
