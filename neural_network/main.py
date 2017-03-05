@@ -1,6 +1,6 @@
 from scipy import io as sio
 import numpy as np
-import scipy as sp
+from scipy import optimize
 
 # using a one hidden layer with 25 nodes model, which is recommended by ML Stanford
 # the input data has 5000 samples with each 40 features, namely 20x20 pixels
@@ -67,9 +67,9 @@ def bwd_propagation(X, Y_logic, g, o, w1, w2, my_lambda):
 
 
 def cost_function(nn_weights, X, Y_logic, my_lambda, hidden_layer_size, input_layer_size, K):
-    m = Y_logic.shape(0)
+    m = Y_logic.shape[0]
     w1 = nn_weights[0:input_layer_size * hidden_layer_size].reshape(input_layer_size, hidden_layer_size)
-    w2 = nn_weights[input_layer_size * hidden_layer_size:].reshape(input_layer_size, K)
+    w2 = nn_weights[input_layer_size * hidden_layer_size:].reshape(hidden_layer_size, K)
     g, o = feed_fwd(X, w1, w2)
     tmp = Y_logic * np.log(o) + (1 - Y_logic) * np.log(1 - o)
     w1[0, :] = 0
@@ -83,26 +83,26 @@ def cost_function(nn_weights, X, Y_logic, my_lambda, hidden_layer_size, input_la
 def gradient(nn_weights, X, Y_logic, my_lambda, hidden_layer_size, input_layer_size, K):
     m = Y_logic.shape[0]
     w1 = nn_weights[0:input_layer_size * hidden_layer_size].reshape(input_layer_size, hidden_layer_size)
-    w2 = nn_weights[input_layer_size * hidden_layer_size:].reshape(input_layer_size, K)
+    w2 = nn_weights[input_layer_size * hidden_layer_size:].reshape(hidden_layer_size, K)
     g, o = feed_fwd(X, w1, w2)
     delta1, delta2 = bwd_propagation(X, Y_logic, g, o, w1, w2, my_lambda)
     return np.hstack((delta1.reshape(delta1.size), delta2.reshape(delta2.size)))
 
 
 
-def update_weight(w1, w2, delta1, delta2, learning_rate):
-    '''
-    **discarded**
-    update w1 and w2 according to the result of backward propagation
-    :param w1: weight between input layer and hidden layer
-    :param w2: weight between hidden layer and output layer
-    :param delta1: partial derivative for weight between input and hidden layer
-    :param delta2: partial derivative for weight between hidden layer and output layer
-    :return: ans1:new w1  and  ans2: new w2
-    '''
-    ans1 = w1 + learning_rate * delta1
-    ans2 = w2 + learning_rate * delta2
-    return ans1, ans2
+# def update_weight(w1, w2, delta1, delta2, learning_rate):
+#     '''
+#     **discarded**
+#     update w1 and w2 according to the result of backward propagation
+#     :param w1: weight between input layer and hidden layer
+#     :param w2: weight between hidden layer and output layer
+#     :param delta1: partial derivative for weight between input and hidden layer
+#     :param delta2: partial derivative for weight between hidden layer and output layer
+#     :return: ans1:new w1  and  ans2: new w2
+#     '''
+#     ans1 = w1 + learning_rate * delta1
+#     ans2 = w2 + learning_rate * delta2
+#     return ans1, ans2
 
 
 def predict(o_p):
@@ -154,12 +154,12 @@ if __name__ == '__main__':
     X, Y, X_test, Y_test = load_data(training_file_path, testing_file_path)
 
     Y_logic = make_logic_matrix(Y, K)
-    w1 = np.random.random_sample(X.shape[1] * (hidden_layer_size)) * 2 * epsilon - epsilon
-    w2 = np.random.random_sample((hidden_layer_size) * K) * 2 * epsilon - epsilon
+    w1 = np.random.random_sample(input_layer_size * hidden_layer_size) * 2 * epsilon - epsilon
+    w2 = np.random.random_sample(hidden_layer_size * K) * 2 * epsilon - epsilon
 
-    nn_weights_opt, J_opt = sp.optimize.fmin_bfgs(f=cost_function, x0=np.hstack(w1, w1), fprime=gradient,
-                                                  args=(X, Y_logic, my_lambda, hidden_layer_size, input_layer_size, K),
-                                                  full_output=True)
-    w1 = nn_weights_opt[0:input_layer_size * hidden_layer_size].reshape(input_layer_size, hidden_layer_size)
-    w2 = nn_weights_opt[input_layer_size * hidden_layer_size:].reshape(input_layer_size, K)
+    [x_opt, f_opt,gopt, Bopt, func_calls, grad_calls, warn_flag] \
+        = optimize.fmin_bfgs(f=cost_function, x0=np.hstack((w1, w2)), fprime=gradient,
+                             args=(X, Y_logic, my_lambda, hidden_layer_size, input_layer_size, K),full_output=True)
+    w1 = x_opt[0:input_layer_size * hidden_layer_size].reshape(input_layer_size, hidden_layer_size)
+    w2 = x_opt[input_layer_size * hidden_layer_size:].reshape(hidden_layer_size, K)
     evaluate_neural_network(X_test, Y_test, w1, w2)
