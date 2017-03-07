@@ -21,6 +21,9 @@ for i in range(0, m):
     y[i, 0] = tmp
     y[i, 0] = y[i, 0] % 10
 
+X = X[0:5, :]
+y = y[0:5, :]
+
 m = int(X.shape[0] * 0.9)
 
 X_test = X[m:, :]
