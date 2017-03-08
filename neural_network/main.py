@@ -2,6 +2,7 @@ from scipy import io as sio
 import numpy as np
 from scipy import optimize
 
+
 # using a one hidden layer with 25 nodes model, which is recommended by ML Stanford
 # the input data has 5000 samples with each 40 features, namely 20x20 pixels
 
@@ -22,7 +23,7 @@ def load_data(training_file_path, testing_file_path):
 
 
 def sigmoid(M):
-    return 1 / (1 + np.exp(-M))
+    return 1.0 / (1.0 + np.exp(-M))
 
 
 def feed_fwd(X_fee, w1_fee, w2_fee):
@@ -33,23 +34,22 @@ def feed_fwd(X_fee, w1_fee, w2_fee):
     return input_hidden_layer_fee, output_hidden_layer_fee, input_output_layer_fee, output_output_layer_fee
 
 
-def cost_function(nn_weights_cos, X_cos, Y_logic_cos, my_lambda_cos, hidden_layer_size_cos, input_layer_size_cos, K_cos):
+def cost_function(nn_weights_cos, X_cos, Y_logic_cos, my_lambda_cos, hidden_layer_size_cos, input_layer_size_cos,
+                  K_cos):
     print("cost function caculated!")
     m = Y_logic_cos.shape[0]
-    w1_cos = nn_weights_cos[0:input_layer_size_cos * hidden_layer_size_cos].reshape(input_layer_size_cos, hidden_layer_size_cos)
+    w1_cos = nn_weights_cos[0:input_layer_size_cos * hidden_layer_size_cos].reshape(input_layer_size_cos,
+                                                                                    hidden_layer_size_cos)
     w2_cos = nn_weights_cos[input_layer_size_cos * hidden_layer_size_cos:].reshape(hidden_layer_size_cos, K_cos)
-    input_hidden_layer, output_hidden_layer, input_output_layer, output_output_layer = feed_fwd(X_cos, w1_cos, w2_cos)
-    J_cos = 0
-    for i in range(0, m):
-        tmp1 = Y_logic_cos[i, :]
-        tmp2 = output_output_layer[i, :]
-        tmp2.shape = (tmp2.size, 1)
-        J_cos += np.dot(tmp1, np.log(tmp2)) + np.dot((1-tmp1), np.log((1-tmp2)))
-    J_cos = -J_cos
+    input_hidden_layer_cos, output_hidden_layer_cos, input_output_layer_cos, output_output_layer_cos \
+        = feed_fwd(X_cos, w1_cos, w2_cos)
 
-    w1_cos[0, :] = 0
-    w2_cos[0, :] = 0
-    J_cos += (sum(sum(w1_cos**2, 0)) + sum(sum(w2_cos**2, 0))) * (my_lambda_cos / 2)
+    tmp = Y_logic_cos * np.log(output_output_layer_cos) + (1 - Y_logic_cos) * np.log(1 - output_output_layer_cos)
+    J_cos = -1 * np.sum(np.sum(tmp))
+
+    w1_cos[:, 0] = 0
+    w2_cos[:, 0] = 0
+    J_cos += (np.sum(np.sum(w1_cos ** 2, 0)) + np.sum(np.sum(w2_cos ** 2, 0))) * (my_lambda_cos / 2)
     J_cos = J_cos / m
     print("calculated cost function=", J_cos)
     return J_cos
@@ -58,36 +58,29 @@ def cost_function(nn_weights_cos, X_cos, Y_logic_cos, my_lambda_cos, hidden_laye
 def gradient(nn_weights_gra, X_gra, Y_logic_gra, my_lambda_gra, hidden_layer_size_gra, input_layer_size_gra, K_gra):
     print("gradient caculated!")
     m = Y_logic_gra.shape[0]
-    w1 = nn_weights_gra[0:input_layer_size_gra * hidden_layer_size_gra].reshape(input_layer_size_gra, hidden_layer_size_gra)
-    w2 = nn_weights_gra[input_layer_size_gra * hidden_layer_size_gra:].reshape(hidden_layer_size_gra, K_gra)
+    w1_gra = nn_weights_gra[0:input_layer_size_gra * hidden_layer_size_gra].reshape(input_layer_size_gra,
+                                                                                    hidden_layer_size_gra)
+    w2_gra = nn_weights_gra[input_layer_size_gra * hidden_layer_size_gra:].reshape(hidden_layer_size_gra, K_gra)
 
-    input_hidden_layer, output_hidden_layer, input_output_layer, output_output_layer = feed_fwd(X_gra, w1, w2)
+    input_hidden_layer_gra, output_hidden_layer_gra, input_output_layer_gra, output_output_layer_gra \
+        = feed_fwd(X_gra, w1_gra, w2_gra)
 
     # backward propagation
-    err_out = output_output_layer - Y_logic_gra
+    err_out_gra = output_output_layer_gra - Y_logic_gra
 
-    error_hidden = np.dot(err_out, w2.transpose()) * input_hidden_layer * (1 - input_hidden_layer)
+    error_hidden_gra = np.dot(err_out_gra, w2_gra.transpose()) * input_hidden_layer_gra * (1 - input_hidden_layer_gra)
+    error_hidden_gra[:, 0] = 0
 
     delta_input = np.zeros(shape=(input_layer_size_gra, hidden_layer_size_gra), dtype=float)
-    for i in range(0, m):
-        tmp1 = X_gra[i, :]
-        tmp2 = error_hidden[i,:]
-        tmp1.shape = (1, tmp1.size)
-        tmp2.shape = (1, tmp2.size)
-        delta_input += np.dot(tmp1.transpose(), tmp2)
-    norm = my_lambda_gra * w1
+
+    delta_input = np.dot(X_gra.transpose(), error_hidden_gra)
+    norm = my_lambda_gra * w1_gra
     norm[0, :] = 0
     delta_input = delta_input + norm
     delta_input = delta_input / m
 
-    delta_hidden = np.zeros(shape=(hidden_layer_size_gra, K_gra), dtype=float)
-    for i in range(0, m):
-        tmp1 = output_hidden_layer[i, :]
-        tmp2 = err_out[i, :]
-        tmp1.shape = (1, tmp1.size)
-        tmp2.shape = (1, tmp2.size)
-        delta_hidden += np.dot(tmp1.transpose(), tmp2)
-    norm = my_lambda_gra * w2
+    delta_hidden = np.dot(output_hidden_layer_gra.transpose(), err_out_gra)
+    norm = my_lambda_gra * w2_gra
     norm[0, :] = 0
     delta_hidden = delta_hidden + norm
     delta_hidden = delta_hidden / m
@@ -125,17 +118,18 @@ def make_logic_matrix(Y_mak, K_mak):
     ans = np.ndarray(shape=(m, K_mak), dtype=int)
     tmp = np.linspace(1, K_mak, K_mak, dtype=int)
     for i in range(0, m):
-        ans[i, :] = (Y_mak[i, 0] == tmp).astype(int)   #here is really trick!! Mark it!
+        ans[i, :] = (Y_mak[i, 0] == tmp).astype(int)  # here is really trick!! Mark it!
     return ans
 
 
 def evaluate_neural_network(X_test_eva, Y_test_eva, w1_eva, w2_eva):
     # TODO
-    input_hidden_layer, output_hidden_layer, input_output_layer, output_output_layer = feed_fwd(X_test_eva, w1_eva, w2_eva)
+    input_hidden_layer, output_hidden_layer, input_output_layer, output_output_layer = feed_fwd(X_test_eva, w1_eva,
+                                                                                                w2_eva)
     Y_pred = predict(output_output_layer)
     m_test = Y_test_eva.shape[0]
     correct_num = np.sum((Y_pred == Y_test_eva).astype(int), 0)[0]
-    print("%d correct on %d test sets, accuracy=%f%%" %(correct_num, m_test, (correct_num*100)/m_test))
+    print("%d correct on %d test sets, accuracy=%f%%" % (correct_num, m_test, (correct_num * 100) / m_test))
 
 
 if __name__ == '__main__':
@@ -164,13 +158,15 @@ if __name__ == '__main__':
     w2 = np.random.random_sample(hidden_layer_size * K) * 2 * epsilon - epsilon
 
     print("learning training samples...")
-    [x_opt, f_opt,gopt, Bopt, func_calls, grad_calls, warn_flag] \
-        = optimize.fmin_bfgs(f=cost_function, x0=np.hstack((w1, w2)), fprime=gradient,
-                args=(X, Y_logic, my_lambda, hidden_layer_size, input_layer_size, K),full_output=True, maxiter=50)
-    print("learning finished! with warn flags:")
-    print(warn_flag)
+    result = optimize.minimize(fun=cost_function, x0=np.hstack((w1, w2)), jac=gradient, method='CG',
+                               args=(X, Y_logic, my_lambda, hidden_layer_size, input_layer_size, K))
+    if result.success:
+        print("learning finish, success")
+    else:
+        print("learning faild, because", result.message)
 
     print("evalusating neural network...")
+    x_opt = result.x
     w1 = x_opt[0:input_layer_size * hidden_layer_size].reshape(input_layer_size, hidden_layer_size)
     w2 = x_opt[input_layer_size * hidden_layer_size:].reshape(hidden_layer_size, K)
     evaluate_neural_network(X_test, Y_test, w1, w2)
