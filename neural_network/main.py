@@ -1,11 +1,17 @@
 from scipy import io as sio
 import numpy as np
 from scipy import optimize
-
+import sys
 
 # using a one hidden layer with 25 nodes model, which is recommended by ML Stanford
 # the input data has 5000 samples with each 40 features, namely 20x20 pixels
 
+cal_counter = 0
+
+def get_weight_matrix(parama, inputs, hiddens, outputs):
+    m1 = parama[0:(inputs+1) * hiddens].reshape(inputs+1,hiddens)
+    m2 = parama[(inputs+1) * hiddens:].reshape((hiddens+1), outputs)
+    return m1, m2
 
 
 def load_data(training_file_path, testing_file_path):
@@ -27,8 +33,9 @@ def sigmoid(M):
 
 
 def feed_fwd(X_fee, w1_fee, w2_fee):
+    m_fee = X_fee.shape[0]
     input_hidden_layer_fee = np.dot(X_fee, w1_fee)
-    output_hidden_layer_fee = sigmoid(input_hidden_layer_fee)
+    output_hidden_layer_fee = np.hstack((np.ones(shape=(m_fee, 1), dtype=int), sigmoid(input_hidden_layer_fee)))
     input_output_layer_fee = np.dot(output_hidden_layer_fee, w2_fee)
     output_output_layer_fee = sigmoid(input_output_layer_fee)
     return input_hidden_layer_fee, output_hidden_layer_fee, input_output_layer_fee, output_output_layer_fee
@@ -36,11 +43,14 @@ def feed_fwd(X_fee, w1_fee, w2_fee):
 
 def cost_function(nn_weights_cos, X_cos, Y_logic_cos, my_lambda_cos, hidden_layer_size_cos, input_layer_size_cos,
                   K_cos):
-    print("cost function caculated!")
+    global cal_counter
+    cal_counter += 1
+    sys.stdout.write("\rcost or gradient function called=>" + str(cal_counter))
+    sys.stdout.flush()
+
     m = Y_logic_cos.shape[0]
-    w1_cos = nn_weights_cos[0:input_layer_size_cos * hidden_layer_size_cos].reshape(input_layer_size_cos,
-                                                                                    hidden_layer_size_cos)
-    w2_cos = nn_weights_cos[input_layer_size_cos * hidden_layer_size_cos:].reshape(hidden_layer_size_cos, K_cos)
+    w1_cos, w2_cos = get_weight_matrix(nn_weights_cos, input_layer_size, hidden_layer_size, K_cos)
+
     input_hidden_layer_cos, output_hidden_layer_cos, input_output_layer_cos, output_output_layer_cos \
         = feed_fwd(X_cos, w1_cos, w2_cos)
 
@@ -51,16 +61,18 @@ def cost_function(nn_weights_cos, X_cos, Y_logic_cos, my_lambda_cos, hidden_laye
     w2_cos[:, 0] = 0
     J_cos += (np.sum(np.sum(w1_cos ** 2, 0)) + np.sum(np.sum(w2_cos ** 2, 0))) * (my_lambda_cos / 2)
     J_cos = J_cos / m
-    print("calculated cost function=", J_cos)
+    # print("calculated cost function=", J_cos)
     return J_cos
 
 
 def gradient(nn_weights_gra, X_gra, Y_logic_gra, my_lambda_gra, hidden_layer_size_gra, input_layer_size_gra, K_gra):
-    print("gradient caculated!")
+    global cal_counter
+    cal_counter += 1
+    sys.stdout.write("\rcost or gradient function called=>" + str(cal_counter))
+    sys.stdout.flush()
+
     m = Y_logic_gra.shape[0]
-    w1_gra = nn_weights_gra[0:input_layer_size_gra * hidden_layer_size_gra].reshape(input_layer_size_gra,
-                                                                                    hidden_layer_size_gra)
-    w2_gra = nn_weights_gra[input_layer_size_gra * hidden_layer_size_gra:].reshape(hidden_layer_size_gra, K_gra)
+    w1_gra, w2_gra = get_weight_matrix(nn_weights_gra, input_layer_size_gra, hidden_layer_size_gra, K_gra)
 
     input_hidden_layer_gra, output_hidden_layer_gra, input_output_layer_gra, output_output_layer_gra \
         = feed_fwd(X_gra, w1_gra, w2_gra)
@@ -68,12 +80,10 @@ def gradient(nn_weights_gra, X_gra, Y_logic_gra, my_lambda_gra, hidden_layer_siz
     # backward propagation
     err_out_gra = output_output_layer_gra - Y_logic_gra
 
-    error_hidden_gra = np.dot(err_out_gra, w2_gra.transpose()) * input_hidden_layer_gra * (1 - input_hidden_layer_gra)
-    error_hidden_gra[:, 0] = 0
+    err_hidden_gra = np.dot(err_out_gra, w2_gra.transpose()) * output_hidden_layer_gra * (1 - output_hidden_layer_gra)
+    err_hidden_gra = err_hidden_gra[:, 1:]
 
-    delta_input = np.zeros(shape=(input_layer_size_gra, hidden_layer_size_gra), dtype=float)
-
-    delta_input = np.dot(X_gra.transpose(), error_hidden_gra)
+    delta_input = np.dot(X_gra.transpose(), err_hidden_gra)
     norm = my_lambda_gra * w1_gra
     norm[0, :] = 0
     delta_input = delta_input + norm
@@ -85,7 +95,7 @@ def gradient(nn_weights_gra, X_gra, Y_logic_gra, my_lambda_gra, hidden_layer_siz
     delta_hidden = delta_hidden + norm
     delta_hidden = delta_hidden / m
 
-    print("gradient calculate end.")
+    # print("gradient calculate end.")
     return np.hstack((delta_input.reshape(delta_input.size), delta_hidden.reshape(delta_hidden.size)))
 
 
@@ -137,8 +147,8 @@ if __name__ == '__main__':
     testing_file_path = "/Users/data/data_hand_write_numbers_testing.mat"
     iteration = 5000
     # learning_rate = 0.1
-    hidden_layer_size = 26
-    input_layer_size = 401
+    hidden_layer_size = 25
+    input_layer_size = 400
     K = 10
     my_lambda = 0
     epsilon = 0.12
@@ -154,8 +164,8 @@ if __name__ == '__main__':
     X, Y, X_test, Y_test = load_data(training_file_path, testing_file_path)
 
     Y_logic = make_logic_matrix(Y, K)
-    w1 = np.random.random_sample(input_layer_size * hidden_layer_size) * 2 * epsilon - epsilon
-    w2 = np.random.random_sample(hidden_layer_size * K) * 2 * epsilon - epsilon
+    w1 = np.random.random_sample((input_layer_size+1) * hidden_layer_size) * 2 * epsilon - epsilon
+    w2 = np.random.random_sample((hidden_layer_size+1) * K) * 2 * epsilon - epsilon
 
     print("learning training samples...")
     result = optimize.minimize(fun=cost_function, x0=np.hstack((w1, w2)), jac=gradient, method='CG',
@@ -167,6 +177,6 @@ if __name__ == '__main__':
 
     print("evalusating neural network...")
     x_opt = result.x
-    w1 = x_opt[0:input_layer_size * hidden_layer_size].reshape(input_layer_size, hidden_layer_size)
-    w2 = x_opt[input_layer_size * hidden_layer_size:].reshape(hidden_layer_size, K)
+    w1, w2 = get_weight_matrix(x_opt, input_layer_size, hidden_layer_size, K)
+
     evaluate_neural_network(X_test, Y_test, w1, w2)
