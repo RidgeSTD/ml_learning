@@ -43,12 +43,10 @@ def feed_fwd(X_fee, w1_fee, w2_fee):
     return input_hidden_layer_fee, output_hidden_layer_fee, input_output_layer_fee, output_output_layer_fee
 
 
-def cost_function(nn_weights_cos, X_cos, Y_logic_cos, my_lambda_cos, hidden_layer_size_cos, input_layer_size_cos,
-                  K_cos):
+def cost_function(w1_cos, w2_cos, X_cos, Y_logic_cos, my_lambda_cos, K_cos):
     global cal_counter
     global global_cost
     m = Y_logic_cos.shape[0]
-    w1_cos, w2_cos = get_weight_matrix(nn_weights_cos, input_layer_size, hidden_layer_size, K_cos)
 
     input_hidden_layer_cos, output_hidden_layer_cos, input_output_layer_cos, output_output_layer_cos \
         = feed_fwd(X_cos, w1_cos, w2_cos)
@@ -65,18 +63,14 @@ def cost_function(nn_weights_cos, X_cos, Y_logic_cos, my_lambda_cos, hidden_laye
     sys.stdout.write(
         "\rcost or gradient function called=>" + str(cal_counter) + " with cost function=>" + str(global_cost))
     sys.stdout.flush()
-    return J_cos
+    return input_hidden_layer_cos, output_hidden_layer_cos, input_output_layer_cos, output_output_layer_cos
 
 
-def gradient(nn_weights_gra, X_gra, Y_logic_gra, my_lambda_gra, hidden_layer_size_gra, input_layer_size_gra, K_gra):
+def gradient(w1_gra, w2_gra, output_hidden_layer_gra, output_output_layer_gra, X_gra, Y_logic_gra, my_lambda_gra):
     global cal_counter
     global global_cost
 
     m = Y_logic_gra.shape[0]
-    w1_gra, w2_gra = get_weight_matrix(nn_weights_gra, input_layer_size_gra, hidden_layer_size_gra, K_gra)
-
-    input_hidden_layer_gra, output_hidden_layer_gra, input_output_layer_gra, output_output_layer_gra \
-        = feed_fwd(X_gra, w1_gra, w2_gra)
 
     # backward propagation
     err_out_gra = output_output_layer_gra - Y_logic_gra
@@ -100,22 +94,22 @@ def gradient(nn_weights_gra, X_gra, Y_logic_gra, my_lambda_gra, hidden_layer_siz
     sys.stdout.write(
         "\rcost or gradient function called=>" + str(cal_counter) + " with cost function=>" + str(global_cost))
     sys.stdout.flush()
-    return np.hstack((delta_input.reshape(delta_input.size), delta_hidden.reshape(delta_hidden.size)))
+    return delta_input, delta_hidden
 
 
-# def update_weight(w1, w2, delta1, delta2, learning_rate):
-#     '''
-#     **discarded**
-#     update w1 and w2 according to the result of backward propagation
-#     :param w1: weight between input layer and hidden layer
-#     :param w2: weight between hidden layer and output layer
-#     :param delta1: partial derivative for weight between input and hidden layer
-#     :param delta2: partial derivative for weight between hidden layer and output layer
-#     :return: ans1:new w1  and  ans2: new w2
-#     '''
-#     ans1 = w1 + learning_rate * delta1
-#     ans2 = w2 + learning_rate * delta2
-#     return ans1, ans2
+def update_weight(w1, w2, delta1, delta2, learning_rate):
+    '''
+    **discarded**
+    update w1 and w2 according to the result of backward propagation
+    :param w1: weight between input layer and hidden layer
+    :param w2: weight between hidden layer and output layer
+    :param delta1: partial derivative for weight between input and hidden layer
+    :param delta2: partial derivative for weight between hidden layer and output layer
+    :return: ans1:new w1  and  ans2: new w2
+    '''
+    ans1 = w1 - learning_rate * delta1
+    ans2 = w2 - learning_rate * delta2
+    return ans1, ans2
 
 
 def predict(o_p):
@@ -156,6 +150,8 @@ if __name__ == '__main__':
     K = 10
     my_lambda = 3
     epsilon = 0.12
+    max_iter = 5000
+    learning_rate = 0.1
     '''
     iteration: iterations of feed forward and backward propagation
     # learning_rate: learning rate of gradient decent, which is actually been used here
@@ -168,20 +164,18 @@ if __name__ == '__main__':
     X, Y, X_test, Y_test = load_data(training_file_path, testing_file_path)
 
     Y_logic = make_logic_matrix(Y, K)
-    w1 = np.random.random_sample((input_layer_size + 1) * hidden_layer_size) * 2 * epsilon - epsilon
-    w2 = np.random.random_sample((hidden_layer_size + 1) * K) * 2 * epsilon - epsilon
+    w1 = np.random.random_sample((input_layer_size + 1, hidden_layer_size)) * 2 * epsilon - epsilon
+    w2 = np.random.random_sample((hidden_layer_size + 1, K)) * 2 * epsilon - epsilon
 
     print("learning training samples...")
-    result = optimize.minimize(fun=cost_function, x0=np.hstack((w1, w2)), jac=gradient, method='Newton-CG',
-                               args=(X, Y_logic, my_lambda, hidden_layer_size, input_layer_size, K),
-                               options={'maxiter': 40})
-    if result.success:
-        print("\nlearning finish, success")
-    else:
-        print("\nlearning faild, because", result.message)
+    # result = optimize.minimize(fun=cost_function, x0=np.hstack((w1, w2)), jac=gradient, method='Newton-CG',
+    #                            args=(X, Y_logic, my_lambda, hidden_layer_size, input_layer_size, K),
+    #                            options={'maxiter': 40})
+    for i in range(0, max_iter):
+        if i != 0:
+            delta_input, delta_hidden = gradient(w1, w2, output_hidden_layer, output_output_layer, X, Y_logic, my_lambda)
+            w1, w2 = update_weight(w1, w2, delta_input, delta_hidden, learning_rate)
+        input_hidden_layer, output_hidden_layer, input_output_layer, output_output_layer = cost_function(w1, w2, X, Y_logic, my_lambda, K)
 
     print("evalusating neural network...")
-    x_opt = result.x
-    w1, w2 = get_weight_matrix(x_opt, input_layer_size, hidden_layer_size, K)
-
     evaluate_neural_network(X_test, Y_test, w1, w2)

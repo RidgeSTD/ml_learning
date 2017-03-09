@@ -24,7 +24,7 @@ for i in range(0, m):
 # X = X[0:5, :]
 # y = y[0:5, :]
 
-m = int(X.shape[0] * 0.9)
+m = int(X.shape[0] * 0.3)
 
 X_test = X[m:, :]
 y_test = y[m:, :]
