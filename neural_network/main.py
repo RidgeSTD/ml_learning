@@ -85,13 +85,13 @@ def gradient(nn_weights_gra, X_gra, Y_logic_gra, my_lambda_gra, hidden_layer_siz
 
     delta_input = np.dot(X_gra.transpose(), err_hidden_gra)
     norm = my_lambda_gra * w1_gra
-    norm[0, :] = 0
+    norm[:, 0] = 0
     delta_input = delta_input + norm
     delta_input = delta_input / m
 
     delta_hidden = np.dot(output_hidden_layer_gra.transpose(), err_out_gra)
     norm = my_lambda_gra * w2_gra
-    norm[0, :] = 0
+    norm[:, 0] = 0
     delta_hidden = delta_hidden + norm
     delta_hidden = delta_hidden / m
 
@@ -150,7 +150,7 @@ if __name__ == '__main__':
     hidden_layer_size = 25
     input_layer_size = 400
     K = 10
-    my_lambda = 0
+    my_lambda = 3
     epsilon = 0.12
     '''
     iteration: iterations of feed forward and backward propagation
@@ -171,9 +171,9 @@ if __name__ == '__main__':
     result = optimize.minimize(fun=cost_function, x0=np.hstack((w1, w2)), jac=gradient, method='CG',
                                args=(X, Y_logic, my_lambda, hidden_layer_size, input_layer_size, K))
     if result.success:
-        print("learning finish, success")
+        print("\nlearning finish, success")
     else:
-        print("learning faild, because", result.message)
+        print("\nlearning faild, because", result.message)
 
     print("evalusating neural network...")
     x_opt = result.x
